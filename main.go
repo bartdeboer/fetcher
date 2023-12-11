@@ -7,9 +7,14 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
-const githubAPI = "https://api.github.com/repos/"
+const (
+	githubAPI    = "https://api.github.com/repos/"
+	reposFile    = "repos.json"
+	installsFile = "installs.json"
+)
 
 type Release struct {
 	TagName string `json:"tag_name"`
@@ -20,27 +25,72 @@ type Release struct {
 }
 
 func main() {
+
+	var command string
+	// Check if there is at least one argument (the command)
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		command = os.Args[1]
+		// Remove the command from os.Args
+		os.Args = append(os.Args[:1], os.Args[2:]...)
+	}
+
 	repo := flag.String("repo", "", "GitHub repo in the format 'owner/repo'")
+	// command := flag.String("command", "", "Command to execute: tap, list-taps, install, list-installs")
 	flag.Parse()
 
-	if *repo == "" {
-		fmt.Println("Repository is required")
-		os.Exit(1)
-	}
+	repos := loadRepos()
 
-	release, err := getLatestRelease(*repo)
-	if err != nil {
-		fmt.Println("Error fetching release:", err)
-		os.Exit(1)
-	}
-
-	fmt.Println("Latest version:", release.TagName)
-	for _, asset := range release.Assets {
-		fmt.Println("Downloading:", asset.Name)
-		if err := downloadFile(asset.BrowserDownloadURL, asset.Name); err != nil {
-			fmt.Println("Error downloading file:", err)
+	switch command {
+	case "tap":
+		if *repo == "" {
+			fmt.Println("Repository is required")
 			os.Exit(1)
 		}
+		repos = append(repos, *repo)
+		saveRepos(repos)
+	case "list-taps":
+		listRepos(repos)
+	case "install":
+		if *repo == "" {
+			fmt.Println("Repository is required")
+			os.Exit(1)
+		}
+		installRelease(*repo)
+	case "list-installs":
+		listInstalls()
+	default:
+		fmt.Println("Unknown command")
+		os.Exit(1)
+	}
+}
+
+func loadRepos() []string {
+	data, err := os.ReadFile(reposFile)
+	if err != nil {
+		return []string{}
+	}
+	var repos []string
+	json.Unmarshal(data, &repos)
+	return repos
+}
+
+func saveRepos(repos []string) {
+	data, err := json.Marshal(repos)
+	if err != nil {
+		fmt.Println("Error saving repositories:", err)
+		os.Exit(1)
+	}
+	os.WriteFile(reposFile, data, 0644)
+}
+
+func listRepos(repos []string) {
+	if len(repos) == 0 {
+		fmt.Println("No tapped repositories")
+		return
+	}
+	fmt.Println("Tapped repositories:")
+	for _, repo := range repos {
+		fmt.Println(repo)
 	}
 }
 
@@ -79,4 +129,46 @@ func downloadFile(url, filename string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+func installRelease(repo string) {
+	release, err := getLatestRelease(repo)
+	if err != nil {
+		fmt.Println("Error fetching release:", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Latest version:", release.TagName)
+	installed := []string{}
+	for _, asset := range release.Assets {
+		installed = append(installed, asset.Name)
+		fmt.Println("Downloading:", asset.Name)
+		if err := downloadFile(asset.BrowserDownloadURL, asset.Name); err != nil {
+			fmt.Println("Error downloading file:", err)
+			os.Exit(1)
+		}
+	}
+	fmt.Println("Successfully installed all assets for", repo)
+}
+
+func listInstalls() {
+	installs := loadInstalls()
+	if len(installs) == 0 {
+		fmt.Println("No installed software")
+		return
+	}
+	fmt.Println("Installed software:")
+	for _, install := range installs {
+		fmt.Println(install)
+	}
+}
+
+func loadInstalls() []string {
+	data, err := os.ReadFile(installsFile)
+	if err != nil {
+		return []string{}
+	}
+	var installs []string
+	json.Unmarshal(data, &installs)
+	return installs
 }
