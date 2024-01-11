@@ -1,2 +1,4 @@
 
 /.gogpt/
+/config.json
+/repos.json
