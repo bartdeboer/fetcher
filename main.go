@@ -96,14 +96,43 @@ func listRepos(repos []string) {
 
 func getLatestRelease(repo string) (*Release, error) {
 	url := githubAPI + repo + "/releases/latest"
-	resp, err := http.Get(url)
+
+	fmt.Printf("Url: %s\n", url)
+
+	// Create a new request
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Retrieve the GitHub token from the environment
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return nil, fmt.Errorf("GitHub token not found in environment")
+	}
+
+	// Set the Authorization header
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
+	// Print response headers
+	for name, values := range resp.Header {
+		for _, value := range values {
+			fmt.Printf("%s: %s\n", name, value)
+		}
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API error: %s", resp.Status)
+		return nil, fmt.Errorf("GitHub API error: %d %s", resp.StatusCode, resp.Status)
 	}
 
 	var release Release
