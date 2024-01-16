@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -170,10 +171,17 @@ func installRelease(repo string) {
 	fmt.Println("Latest version:", release.TagName)
 	installed := []string{}
 	for _, asset := range release.Assets {
+		if !(strings.Contains(asset.Name, runtime.GOOS) && strings.Contains(asset.Name, runtime.GOARCH)) {
+			continue
+		}
 		installed = append(installed, asset.Name)
 		fmt.Println("Downloading:", asset.Name)
 		if err := downloadFile(asset.BrowserDownloadURL, asset.Name); err != nil {
 			fmt.Println("Error downloading file:", err)
+			os.Exit(1)
+		}
+		if err := installFromArchive(asset.Name); err != nil {
+			fmt.Println("Error installing file:", err)
 			os.Exit(1)
 		}
 	}
