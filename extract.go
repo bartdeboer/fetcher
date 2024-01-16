@@ -25,15 +25,16 @@ func extractArchive(filePath, destDir string) error {
 
 // extractTarGz handles the extraction of .tar.gz files.
 func extractTarGz(filePath, destDir string) error {
+
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error extracting .tar.gz: %v", err)
 	}
 	defer file.Close()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error extracting .tar.gz: %v", err)
 	}
 	defer gzipReader.Close()
 
@@ -44,26 +45,33 @@ func extractTarGz(filePath, destDir string) error {
 		case err == io.EOF:
 			return nil
 		case err != nil:
-			return err
+			return fmt.Errorf("Error extracting .tar.gz: %v", err)
 		case header == nil:
 			continue
 		}
 
 		target := filepath.Join(destDir, header.Name)
+
 		switch header.Typeflag {
 		case tar.TypeDir:
+
+			fmt.Printf("Creating directory %s\n", target)
+
 			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
-				return err
+				return fmt.Errorf("Error extracting .tar.gz: %v", err)
 			}
 		case tar.TypeReg:
+
+			fmt.Printf("Creating file %s\n", target)
+
 			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
-				return err
+				return fmt.Errorf("Error extracting .tar.gz: %v", err)
 			}
 
 			if _, err := io.Copy(outFile, tarReader); err != nil {
 				outFile.Close()
-				return err
+				return fmt.Errorf("Error extracting .tar.gz: %v", err)
 			}
 			outFile.Close()
 		}

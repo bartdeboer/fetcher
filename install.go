@@ -10,7 +10,8 @@ import (
 
 func installFromArchive(archiveFilename string) error {
 	// Extract the basename of the archive
-	base := strings.TrimSuffix(filepath.Base(archiveFilename), filepath.Ext(archiveFilename))
+	base := strings.TrimSuffix(filepath.Base(archiveFilename), ".tar.gz")
+	base = strings.TrimSuffix(filepath.Base(archiveFilename), ".zip")
 
 	// Create a temporary directory
 	tempDir := filepath.Join(os.TempDir(), base)
