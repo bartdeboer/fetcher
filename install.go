@@ -15,13 +15,13 @@ func installFromArchive(archiveFilename string) error {
 	// Create a temporary directory
 	tempDir := filepath.Join(os.TempDir(), base)
 	if err := os.Mkdir(tempDir, 0755); err != nil {
-		return err
+		return fmt.Errorf("Error installing archive: %v", err)
 	}
 	defer os.RemoveAll(tempDir) // Ensure cleanup
 
 	// Extract the archive into the temporary directory
 	if err := extractArchive(archiveFilename, tempDir); err != nil {
-		return err
+		return fmt.Errorf("Error installing archive: %v", err)
 	}
 
 	// Define the destination directory (GOPATH/bin)
@@ -29,7 +29,7 @@ func installFromArchive(archiveFilename string) error {
 
 	// Copy extracted files to the destination
 	if err := CopyDir(tempDir, destDir); err != nil {
-		return err
+		return fmt.Errorf("Error installing archive: %v", err)
 	}
 
 	// Optionally delete the archive file
