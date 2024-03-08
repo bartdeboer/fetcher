@@ -1,4 +1,4 @@
-package main
+package extractor
 
 import (
 	"archive/tar"
@@ -12,29 +12,29 @@ import (
 )
 
 // extractArchive determines the type of the archive and extracts it.
-func extractArchive(filePath, destDir string) error {
+func ExtractArchive(filePath, destDir string) error {
 	switch {
 	case strings.HasSuffix(filePath, ".tar.gz"):
-		return extractTarGz(filePath, destDir)
+		return ExtractTarGz(filePath, destDir)
 	case strings.HasSuffix(filePath, ".zip"):
-		return extractZip(filePath, destDir)
+		return ExtractZip(filePath, destDir)
 	default:
 		return fmt.Errorf("unsupported file extension")
 	}
 }
 
 // extractTarGz handles the extraction of .tar.gz files.
-func extractTarGz(filePath, destDir string) error {
+func ExtractTarGz(filePath, destDir string) error {
 
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("Error extracting .tar.gz: %v", err)
+		return fmt.Errorf("Error opening file: %v", err)
 	}
 	defer file.Close()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
-		return fmt.Errorf("Error extracting .tar.gz: %v", err)
+		return fmt.Errorf("Error creating gzip.NewReader: %v", err)
 	}
 	defer gzipReader.Close()
 
@@ -45,7 +45,7 @@ func extractTarGz(filePath, destDir string) error {
 		case err == io.EOF:
 			return nil
 		case err != nil:
-			return fmt.Errorf("Error extracting .tar.gz: %v", err)
+			return fmt.Errorf("Error reading tarReader.Next: %v", err)
 		case header == nil:
 			continue
 		}
@@ -58,20 +58,21 @@ func extractTarGz(filePath, destDir string) error {
 			fmt.Printf("Creating directory %s\n", target)
 
 			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
-				return fmt.Errorf("Error extracting .tar.gz: %v", err)
+				return fmt.Errorf("Error creating directory: %v", err)
 			}
+
 		case tar.TypeReg:
 
 			fmt.Printf("Creating file %s\n", target)
 
 			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
-				return fmt.Errorf("Error extracting .tar.gz: %v", err)
+				return fmt.Errorf("Error creating file: %v", err)
 			}
 
 			if _, err := io.Copy(outFile, tarReader); err != nil {
 				outFile.Close()
-				return fmt.Errorf("Error extracting .tar.gz: %v", err)
+				return fmt.Errorf("Error extracting into file: %v", err)
 			}
 			outFile.Close()
 		}
@@ -79,7 +80,7 @@ func extractTarGz(filePath, destDir string) error {
 }
 
 // extractZip handles the extraction of .zip files.
-func extractZip(filePath, destDir string) error {
+func ExtractZip(filePath, destDir string) error {
 	zipReader, err := zip.OpenReader(filePath)
 	if err != nil {
 		return err
