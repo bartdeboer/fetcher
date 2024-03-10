@@ -41,6 +41,12 @@ func main() {
 		fetcher.SaveRepos(repos)
 	case "list-taps":
 		fetcher.ListRepos(repos)
+	case "download":
+		if *repo == "" {
+			fmt.Println("Repository is required")
+			os.Exit(1)
+		}
+		fetcher.InstallRelease(*repo)
 	case "install":
 		if *repo == "" {
 			fmt.Println("Repository is required")
