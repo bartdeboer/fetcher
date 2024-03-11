@@ -5,11 +5,11 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/bartdeboer/fetcher/internal/providers"
 	"github.com/bartdeboer/fetcher/internal/providers/github"
+	"github.com/bartdeboer/fetcher/internal/providers/provider"
 )
 
-func NewRepoFromUrl(repoUrl string) (providers.Provider, error) {
+func NewRepoFromUrl(repoUrl string) (provider.Provider, error) {
 	parsedURL, err := url.Parse(repoUrl)
 	if err != nil {
 		return nil, err

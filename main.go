@@ -9,10 +9,6 @@ import (
 	"github.com/bartdeboer/fetcher/internal/fetcher"
 )
 
-const (
-	reposFile = "repos.json"
-)
-
 func main() {
 
 	var command string
@@ -27,7 +23,7 @@ func main() {
 	frepo := flag.String("repo", "", "GitHub repo in the format 'owner/repo'")
 	flag.Parse()
 
-	f, err := fetcher.NewFetcherFromConfig(reposFile)
+	f, err := fetcher.NewFetcherFromConfig()
 	if err != nil {
 		fmt.Printf("error launcing fetcher: %v\n", err)
 		os.Exit(1)
@@ -35,46 +31,22 @@ func main() {
 
 	switch command {
 	case "tap":
-		if *frepo == "" {
-			fmt.Println("Repository is required")
+		if err := f.SaveRepo(*frepo); err != nil {
+			fmt.Printf("Error saving repository: %s %v\n", *frepo, err)
 			os.Exit(1)
 		}
-		f.SaveRepo(*frepo)
 	case "list-taps":
 		f.ListRepos()
 	case "download":
-		if *frepo == "" {
-			fmt.Println("Repository is required")
+		if err := f.FetchAssets(*frepo); err != nil {
+			fmt.Printf("Error retrieving latest release: %s %v\n", *frepo, err)
 			os.Exit(1)
 		}
-		repo := f.FindRepo(*frepo)
-		if repo == nil {
-			fmt.Printf("Could not find repo: %s\n", *frepo)
-			os.Exit(1)
-		}
-		latestRelease, err := repo.LatestRelease()
-		if err == nil {
-			fmt.Printf("Error retrieving latest release: %s\n", *frepo)
-			os.Exit(1)
-		}
-		latestRelease.FetchAssets()
 	case "install":
-		if *frepo == "" {
-			fmt.Println("Repository is required")
+		if err := f.InstallAssets(*frepo); err != nil {
+			fmt.Printf("Error retrieving latest release: %s %v\n", *frepo, err)
 			os.Exit(1)
 		}
-		repo := f.FindRepo(*frepo)
-		if repo == nil {
-			fmt.Printf("Could not find repo: %s\n", *frepo)
-			os.Exit(1)
-		}
-		latestRelease, err := repo.LatestRelease()
-		if err == nil {
-			fmt.Printf("Error retrieving latest release: %s\n", *frepo)
-			os.Exit(1)
-		}
-		latestRelease.FetchAssets()
-		repo.InstallAssets(latestRelease.Assets())
 	case "list-installs":
 		// fetcher.ListInstalls()
 	default:

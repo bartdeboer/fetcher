@@ -1,16 +1,16 @@
-package providers
+package provider
 
 type Provider interface {
-	LatestRelease(repo string) (Release, error)
+	LatestRelease(repo, token string) (Release, error)
 }
 
 type Release interface {
 	TagName() string
 	Assets() []Asset
-	FetchAssets() error
+	// FetchAssets() error
 }
 
 type Asset interface {
 	Name() string
-	Fetch() error
+	Fetch(token string) error
 }

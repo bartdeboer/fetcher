@@ -3,19 +3,23 @@ package github
 import (
 	"encoding/json"
 
-	"github.com/bartdeboer/fetcher/internal/providers"
+	"github.com/bartdeboer/fetcher/internal/providers/provider"
 )
 
 func (r *Release) UnmarshalJSON(data []byte) error {
 	var tmp struct {
-		TagName string            `json:"tag_name"`
-		Assets  []providers.Asset `json:"assets"`
+		TagName string   `json:"tag_name"`
+		Assets  []*Asset `json:"assets"`
 	}
 	if err := json.Unmarshal(data, &tmp); err != nil {
 		return err
 	}
 	r.tagName = tmp.TagName
-	r.assets = tmp.Assets
+	interfaceAssets := make([]provider.Asset, len(tmp.Assets))
+	for i, asset := range tmp.Assets {
+		interfaceAssets[i] = asset
+	}
+	r.assets = interfaceAssets
 	return nil
 }
 

@@ -5,73 +5,62 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 
-	"github.com/bartdeboer/fetcher/internal/providers"
+	"github.com/bartdeboer/fetcher/internal/providers/factory"
 )
 
-const (
-	githubAPI    = "https://api.github.com/repos/"
-	reposFile    = "repos.json"
-	installsFile = "installs.json"
-)
+const configFile = "fetcher.json"
 
 type Fetcher struct {
-	reposFilename string
-	repos         []*Repo
+	Repos []*Repo `json:"repositories"`
 }
 
-type Repo struct {
-	Url                string `json:"url"`
-	InstalledAssetName string `json:"installed_asset_name"`
-	InstalledTagName   string `json:"installed_tag_name"`
-	provider           providers.Provider
-}
-
-func NewFetcherFromConfig(filename string) (*Fetcher, error) {
-	f := &Fetcher{
-		reposFilename: filename,
-	}
-	if filename == "" {
-		return nil, fmt.Errorf("no config file")
-	}
-	err := f.loadRepos(filename)
+func NewFetcherFromConfig() (*Fetcher, error) {
+	var f *Fetcher
+	data, err := os.ReadFile(configFile)
 	if err != nil {
-		return nil, fmt.Errorf("error loading repos: %v", err)
+		if !os.IsNotExist(err) {
+			return nil, fmt.Errorf("error reading file: %s %v", configFile, err)
+		}
+		return &Fetcher{}, nil
+	}
+	if err := json.Unmarshal(data, &f); err != nil {
+		return nil, fmt.Errorf("error unmarshaling json: %v", err)
 	}
 	return f, nil
 }
 
-func (f *Fetcher) loadRepos(filename string) error {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return fmt.Errorf("error reading file: %s %v", filename, err)
-	}
-	json.Unmarshal(data, &f.repos)
-	return nil
-}
-
-func (f *Fetcher) saveRepos() error {
-	data, err := json.Marshal(f.repos)
+func (f *Fetcher) saveState() error {
+	data, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
 		return fmt.Errorf("error writing json: %v", err)
 	}
-	return os.WriteFile(reposFile, data, 0644)
+	return os.WriteFile(configFile, data, 0644)
 }
 
 func (f *Fetcher) SaveRepo(repoUrl string) error {
+	if repoUrl == "" {
+		return fmt.Errorf("url is required")
+	}
 	_, err := url.Parse(repoUrl)
 	if err != nil {
 		return fmt.Errorf("error parsing url: %s %v", repoUrl, err)
 	}
-	f.repos = append(f.repos, &Repo{
+	repo := f.findRepo(repoUrl)
+	if repo != nil {
+		return fmt.Errorf("repo already exists: %s", repoUrl)
+	}
+	f.Repos = append(f.Repos, &Repo{
 		Url: repoUrl,
 	})
-	return f.saveRepos()
+	fmt.Printf("Update %s to add your token\n", configFile)
+	return f.saveState()
 }
 
-func (f *Fetcher) FindRepo(name string) *Repo {
-	for _, repo := range f.repos {
+func (f *Fetcher) findRepo(name string) *Repo {
+	for _, repo := range f.Repos {
 		if repo.Url == name || strings.HasSuffix(repo.Url, "/"+name) {
 			return repo
 		}
@@ -79,35 +68,72 @@ func (f *Fetcher) FindRepo(name string) *Repo {
 	return nil
 }
 
+func (f *Fetcher) FindRepo(name string) (*Repo, error) {
+	foundRepo := f.findRepo(name)
+	if foundRepo == nil {
+		return nil, fmt.Errorf("repository not found: %s", name)
+	}
+	provider, err := factory.NewRepoFromUrl(foundRepo.Url)
+	if err != nil {
+		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
+	}
+	foundRepo.provider = provider
+	return foundRepo, nil
+}
+
 func (f *Fetcher) ListRepos() {
-	if len(f.repos) == 0 {
+	if len(f.Repos) == 0 {
 		fmt.Println("No tapped repositories")
 		return
 	}
 	fmt.Println("Tapped repositories:")
-	for _, repo := range f.repos {
+	for _, repo := range f.Repos {
 		fmt.Println(repo.Url)
 	}
 }
 
-func (r *Repo) LatestRelease() (providers.Release, error) {
-	// TODO get release tag
-	release, err := r.provider.LatestRelease(r.Url)
+func (f *Fetcher) FetchAssets(repoName string) error {
+	repo, err := f.FindRepo(repoName)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving latest release: %v", err)
+		return err
 	}
-	r.InstalledTagName = release.TagName()
-	// TODO: Save updated repo
-	return r.provider.LatestRelease(r.Url)
+	release, err := repo.LatestRelease()
+	if err != nil {
+		return err
+	}
+	for _, asset := range release.Assets() {
+		if err := asset.Fetch(repo.Token); err != nil {
+			return fmt.Errorf("error fetching file: %v", err)
+		}
+	}
+	return nil
 }
 
-func (r *Repo) InstallAssets(release providers.Release) error {
-	// TODO update repo with installed release tag
+func (f *Fetcher) InstallAssets(repoName string) error {
+	repo, err := f.FindRepo(repoName)
+	if err != nil {
+		return err
+	}
+	release, err := repo.LatestRelease()
+	if err != nil {
+		return err
+	}
+	isInstalled := false
 	for _, asset := range release.Assets() {
-		if err := InstallFromArchive(asset.Name()); err != nil {
-			fmt.Println("Error installing file:", err)
-			os.Exit(1)
+		if !(strings.Contains(asset.Name(), runtime.GOOS) && strings.Contains(asset.Name(), runtime.GOARCH)) {
+			continue
 		}
+		if err := asset.Fetch(repo.Token); err != nil {
+			return fmt.Errorf("error fetching file: %v", err)
+		}
+		if err := InstallFromArchive(asset.Name()); err != nil {
+			return fmt.Errorf("error installing file: %v", err)
+		}
+		isInstalled = true
+	}
+	if isInstalled {
+		repo.InstalledTagName = release.TagName()
+		f.saveState()
 	}
 	return nil
 }
