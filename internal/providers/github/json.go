@@ -2,8 +2,6 @@ package github
 
 import (
 	"encoding/json"
-
-	"github.com/bartdeboer/fetcher/internal/providers/provider"
 )
 
 func (r *Release) UnmarshalJSON(data []byte) error {
@@ -15,11 +13,9 @@ func (r *Release) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	r.tagName = tmp.TagName
-	interfaceAssets := make([]provider.Asset, len(tmp.Assets))
-	for i, asset := range tmp.Assets {
-		interfaceAssets[i] = asset
+	for _, asset := range tmp.Assets {
+		r.assets = append(r.assets, asset)
 	}
-	r.assets = interfaceAssets
 	return nil
 }
 

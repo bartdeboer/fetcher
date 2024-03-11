@@ -7,8 +7,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-
-	"github.com/bartdeboer/fetcher/internal/providers/factory"
 )
 
 const configFile = "fetcher.json"
@@ -22,7 +20,7 @@ func NewFetcherFromConfig() (*Fetcher, error) {
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return nil, fmt.Errorf("error reading file: %s %v", configFile, err)
+			return nil, fmt.Errorf("error reading file %s: %v", configFile, err)
 		}
 		return &Fetcher{}, nil
 	}
@@ -46,7 +44,7 @@ func (f *Fetcher) SaveRepo(repoUrl string) error {
 	}
 	_, err := url.Parse(repoUrl)
 	if err != nil {
-		return fmt.Errorf("error parsing url: %s %v", repoUrl, err)
+		return fmt.Errorf("error parsing url %s: %v", repoUrl, err)
 	}
 	repo := f.findRepo(repoUrl)
 	if repo != nil {
@@ -73,7 +71,7 @@ func (f *Fetcher) FindRepo(name string) (*Repo, error) {
 	if foundRepo == nil {
 		return nil, fmt.Errorf("repository not found: %s", name)
 	}
-	provider, err := factory.NewRepoFromUrl(foundRepo.Url)
+	provider, err := NewRepoFromUrl(foundRepo.Url)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
 	}

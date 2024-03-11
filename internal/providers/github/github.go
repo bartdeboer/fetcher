@@ -27,27 +27,17 @@ type Release struct {
 	assets  []provider.Asset
 }
 
+func (r *Release) TagName() string          { return r.tagName }
+func (r *Release) Assets() []provider.Asset { return r.assets }
+
 type Asset struct {
 	name               string
 	BrowserDownloadURL string
 	url                string
 }
 
-func (r *Release) TagName() string {
-	return r.tagName
-}
-
-func (r *Release) Assets() []provider.Asset {
-	return r.assets
-}
-
-func (a *Asset) Name() string {
-	return a.name
-}
-
-func (a *Asset) Url() string {
-	return a.url
-}
+func (a *Asset) Name() string { return a.name }
+func (a *Asset) Url() string  { return a.url }
 
 func (a *Asset) Fetch(token string) error {
 

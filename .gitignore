@@ -1,7 +1,7 @@
 
 /.gogpt/
-/config.json
-/repos.json
 /fetcher.json
 /test.bat
 /.env
+/*.tar.gz
+/*.zip

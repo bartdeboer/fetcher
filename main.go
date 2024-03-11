@@ -32,19 +32,19 @@ func main() {
 	switch command {
 	case "tap":
 		if err := f.SaveRepo(*frepo); err != nil {
-			fmt.Printf("Error saving repository: %s %v\n", *frepo, err)
+			fmt.Printf("Error saving repository %s: %v\n", *frepo, err)
 			os.Exit(1)
 		}
 	case "list-taps":
 		f.ListRepos()
 	case "download":
 		if err := f.FetchAssets(*frepo); err != nil {
-			fmt.Printf("Error retrieving latest release: %s %v\n", *frepo, err)
+			fmt.Printf("Error retrieving latest release %s: %v\n", *frepo, err)
 			os.Exit(1)
 		}
 	case "install":
 		if err := f.InstallAssets(*frepo); err != nil {
-			fmt.Printf("Error retrieving latest release: %s %v\n", *frepo, err)
+			fmt.Printf("Error installing release %s: %v\n", *frepo, err)
 			os.Exit(1)
 		}
 	case "list-installs":

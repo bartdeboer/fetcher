@@ -7,7 +7,6 @@ type Provider interface {
 type Release interface {
 	TagName() string
 	Assets() []Asset
-	// FetchAssets() error
 }
 
 type Asset interface {

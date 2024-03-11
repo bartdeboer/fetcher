@@ -40,15 +40,15 @@ func CopyDir(srcDir, destDir string) error {
 	var dirInfo os.FileInfo
 
 	if dirInfo, err = os.Stat(srcDir); err != nil {
-		return fmt.Errorf("error copying directory: %v", err)
+		return fmt.Errorf("error finding source directory %s: %v", srcDir, err)
 	}
 
 	if err = os.MkdirAll(destDir, dirInfo.Mode()); err != nil {
-		return fmt.Errorf("error copying directory: %v", err)
+		return fmt.Errorf("error creating destination directory %s: %v", destDir, err)
 	}
 
 	if entries, err = os.ReadDir(srcDir); err != nil {
-		return fmt.Errorf("error copying directory: %v", err)
+		return fmt.Errorf("error reading entries: %v", err)
 	}
 
 	for _, entry := range entries {
@@ -61,7 +61,7 @@ func CopyDir(srcDir, destDir string) error {
 			}
 		} else {
 			if err = CopyFile(srcPath, destPath); err != nil {
-				fmt.Printf("Error copying directory: %v", err)
+				fmt.Printf("Error copying file: %v", err)
 			}
 		}
 	}

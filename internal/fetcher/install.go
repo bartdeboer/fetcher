@@ -9,40 +9,34 @@ import (
 	"github.com/bartdeboer/fetcher/internal/extractor"
 )
 
-func extractFromArchive(archiveFilename string, useTemp bool) (string, error) {
-
-	// Extract the basename of the archive
+func createExtractDir(archiveFilename string, useTemp bool) (string, error) {
 	base := filepath.Base(archiveFilename)
 	base = strings.TrimSuffix(base, ".tar.gz")
 	base = strings.TrimSuffix(base, ".zip")
-
 	var dir string
 	if useTemp {
 		dir = os.TempDir()
 	} else {
 		dir = "."
 	}
-
-	// Create a temporary directory
-	destDir := filepath.Join(dir, base)
-	if err := os.Mkdir(destDir, 0755); err != nil {
-		return "", fmt.Errorf("error extracting archive: %v", err)
+	extractDir := filepath.Join(dir, base)
+	if err := os.Mkdir(extractDir, 0755); err != nil {
+		return "", fmt.Errorf("error creating destination directory %s: %v", extractDir, err)
 	}
-	defer os.RemoveAll(destDir)
-
-	// Extract the archive into the temporary directory
-	if err := extractor.ExtractArchive(archiveFilename, destDir); err != nil {
-		return "", fmt.Errorf("error extracting archive: %v", err)
-	}
-
-	return destDir, nil
+	return extractDir, nil
 }
 
 func InstallFromArchive(archiveFilename string) error {
 
-	extractDir, err := extractFromArchive(archiveFilename, true)
+	extractDir, err := createExtractDir(archiveFilename, true)
 	if err != nil {
-		return fmt.Errorf("error installing archive: %v", err)
+		return fmt.Errorf("error creating extract dir: %v", err)
+	}
+
+	defer os.RemoveAll(extractDir)
+
+	if err := extractor.ExtractArchive(archiveFilename, extractDir); err != nil {
+		return fmt.Errorf("error extracting archive: %v", err)
 	}
 
 	// Define the destination directory (GOPATH/bin)
@@ -50,7 +44,7 @@ func InstallFromArchive(archiveFilename string) error {
 
 	// Copy extracted files to the destination
 	if err := CopyDir(extractDir, destDir); err != nil {
-		return fmt.Errorf("error installing archive: %v", err)
+		return fmt.Errorf("error installing files: %v", err)
 	}
 
 	// Optionally delete the archive file
