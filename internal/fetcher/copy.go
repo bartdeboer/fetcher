@@ -15,20 +15,20 @@ func CopyFile(srcPath, destPath string) error {
 	var fileInfo os.FileInfo
 
 	if srcFile, err = os.Open(srcPath); err != nil {
-		return fmt.Errorf("Error copying file: %v", err)
+		return fmt.Errorf("error copying file: %v", err)
 	}
 	defer srcFile.Close()
 
 	if destFile, err = os.Create(destPath); err != nil {
-		return fmt.Errorf("Error copying file: %v", err)
+		return fmt.Errorf("error copying file: %v", err)
 	}
 	defer destFile.Close()
 
 	if _, err = io.Copy(destFile, srcFile); err != nil {
-		return fmt.Errorf("Error copying file: %v", err)
+		return fmt.Errorf("error copying file: %v", err)
 	}
 	if fileInfo, err = os.Stat(srcPath); err != nil {
-		return fmt.Errorf("Error copying file: %v", err)
+		return fmt.Errorf("error copying file: %v", err)
 	}
 	return os.Chmod(destPath, fileInfo.Mode())
 }
@@ -40,15 +40,15 @@ func CopyDir(srcDir, destDir string) error {
 	var dirInfo os.FileInfo
 
 	if dirInfo, err = os.Stat(srcDir); err != nil {
-		return fmt.Errorf("Error copying directory: %v", err)
+		return fmt.Errorf("error copying directory: %v", err)
 	}
 
 	if err = os.MkdirAll(destDir, dirInfo.Mode()); err != nil {
-		return fmt.Errorf("Error copying directory: %v", err)
+		return fmt.Errorf("error copying directory: %v", err)
 	}
 
 	if entries, err = os.ReadDir(srcDir); err != nil {
-		return fmt.Errorf("Error copying directory: %v", err)
+		return fmt.Errorf("error copying directory: %v", err)
 	}
 
 	for _, entry := range entries {

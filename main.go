@@ -10,14 +10,13 @@ import (
 )
 
 const (
-	githubAPI    = "https://api.github.com/repos/"
-	reposFile    = "repos.json"
-	installsFile = "installs.json"
+	reposFile = "repos.json"
 )
 
 func main() {
 
 	var command string
+
 	// Check if there is at least one argument (the command)
 	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
 		command = os.Args[1]
@@ -25,36 +24,59 @@ func main() {
 		os.Args = append(os.Args[:1], os.Args[2:]...)
 	}
 
-	repo := flag.String("repo", "", "GitHub repo in the format 'owner/repo'")
-	// command := flag.String("command", "", "Command to execute: tap, list-taps, install, list-installs")
+	frepo := flag.String("repo", "", "GitHub repo in the format 'owner/repo'")
 	flag.Parse()
 
-	repos := fetcher.LoadRepos()
+	f, err := fetcher.NewFetcherFromConfig(reposFile)
+	if err != nil {
+		fmt.Printf("error launcing fetcher: %v\n", err)
+		os.Exit(1)
+	}
 
 	switch command {
 	case "tap":
-		if *repo == "" {
+		if *frepo == "" {
 			fmt.Println("Repository is required")
 			os.Exit(1)
 		}
-		repos = append(repos, *repo)
-		fetcher.SaveRepos(repos)
+		f.SaveRepo(*frepo)
 	case "list-taps":
-		fetcher.ListRepos(repos)
+		f.ListRepos()
 	case "download":
-		if *repo == "" {
+		if *frepo == "" {
 			fmt.Println("Repository is required")
 			os.Exit(1)
 		}
-		fetcher.InstallRelease(*repo)
+		repo := f.FindRepo(*frepo)
+		if repo == nil {
+			fmt.Printf("Could not find repo: %s\n", *frepo)
+			os.Exit(1)
+		}
+		latestRelease, err := repo.LatestRelease()
+		if err == nil {
+			fmt.Printf("Error retrieving latest release: %s\n", *frepo)
+			os.Exit(1)
+		}
+		latestRelease.FetchAssets()
 	case "install":
-		if *repo == "" {
+		if *frepo == "" {
 			fmt.Println("Repository is required")
 			os.Exit(1)
 		}
-		fetcher.InstallRelease(*repo)
+		repo := f.FindRepo(*frepo)
+		if repo == nil {
+			fmt.Printf("Could not find repo: %s\n", *frepo)
+			os.Exit(1)
+		}
+		latestRelease, err := repo.LatestRelease()
+		if err == nil {
+			fmt.Printf("Error retrieving latest release: %s\n", *frepo)
+			os.Exit(1)
+		}
+		latestRelease.FetchAssets()
+		repo.InstallAssets(latestRelease.Assets())
 	case "list-installs":
-		fetcher.ListInstalls()
+		// fetcher.ListInstalls()
 	default:
 		fmt.Println("Unknown command")
 		os.Exit(1)
