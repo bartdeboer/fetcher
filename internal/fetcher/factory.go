@@ -9,14 +9,14 @@ import (
 	"github.com/bartdeboer/fetcher/internal/providers/provider"
 )
 
-func NewRepoFromUrl(repoUrl string) (provider.Provider, error) {
+func NewRepoFromUrl(repoUrl, token string) (provider.Provider, error) {
 	parsedURL, err := url.Parse(repoUrl)
 	if err != nil {
 		return nil, err
 	}
 	switch {
 	case strings.Contains(parsedURL.Host, "github.com"):
-		return github.NewGithub(repoUrl), nil
+		return github.New(repoUrl, token), nil
 	default:
 		fmt.Println("Unsupported Git service provider")
 	}

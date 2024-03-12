@@ -12,41 +12,66 @@ import (
 
 const apiBaseUrl = "https://api.github.com/repos/"
 
-type Github struct {
-	url string
+type Repo struct {
+	url   string
+	token string
 }
 
-func NewGithub(url string) *Github {
-	return &Github{
+func New(url, token string) *Repo {
+	return &Repo{
 		url,
+		token,
 	}
 }
 
 type Release struct {
 	tagName string
-	assets  []provider.Asset
+	assets  []Asset
+	token   string
 }
-
-func (r *Release) TagName() string          { return r.tagName }
-func (r *Release) Assets() []provider.Asset { return r.assets }
 
 type Asset struct {
-	name               string
-	BrowserDownloadURL string
-	url                string
+	Name               string `json:"name"`
+	Url                string `json:"url"`
+	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-func (a *Asset) Name() string { return a.name }
-func (a *Asset) Url() string  { return a.url }
+func (r *Release) TagName() string {
+	return r.tagName
+}
 
-func (a *Asset) Fetch(token string) error {
+func (r *Release) Files() []string {
+	var files []string
+	for _, asset := range r.assets {
+		files = append(files, asset.Name)
+	}
+	return files
+}
 
-	fmt.Printf("Url: %s\n", a.Url())
+func (r *Release) findAsset(name string) (*Asset, error) {
+	for i, asset := range r.assets {
+		if asset.Name == name {
+			return &r.assets[i], nil
+		}
+	}
+	return nil, fmt.Errorf("asset %s not found", name)
+}
 
-	req, err := http.NewRequest("GET", a.Url(), nil)
+func (r *Release) FetchFile(name string) error {
+
+	asset, err := r.findAsset(name)
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("Url: %s\n", asset.Url)
+
+	req, err := http.NewRequest("GET", asset.Url, nil)
+	if err != nil {
+		return err
+	}
+
+	var token = r.token
 
 	if token == "" {
 		token = os.Getenv("GITHUB_TOKEN")
@@ -75,7 +100,7 @@ func (a *Asset) Fetch(token string) error {
 		return fmt.Errorf("failed to download file: %d %s", resp.StatusCode, resp.Status)
 	}
 
-	out, err := os.Create(a.Name())
+	out, err := os.Create(asset.Name)
 	if err != nil {
 		return err
 	}
@@ -85,7 +110,7 @@ func (a *Asset) Fetch(token string) error {
 	return err
 }
 
-func (g *Github) LatestRelease(repoUrl, token string) (provider.Release, error) {
+func (g *Repo) LatestRelease(repoUrl, token string) (provider.Release, error) {
 
 	repoName, err := extractRepoName(repoUrl)
 	if err != nil {
@@ -133,6 +158,8 @@ func (g *Github) LatestRelease(repoUrl, token string) (provider.Release, error) 
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
 	}
+
+	release.token = g.token
 
 	return &release, nil
 }

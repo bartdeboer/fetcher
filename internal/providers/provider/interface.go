@@ -6,10 +6,6 @@ type Provider interface {
 
 type Release interface {
 	TagName() string
-	Assets() []Asset
-}
-
-type Asset interface {
-	Name() string
-	Fetch(token string) error
+	FetchFile(name string) error
+	Files() []string
 }

@@ -71,7 +71,7 @@ func (f *Fetcher) FindRepo(name string) (*Repo, error) {
 	if foundRepo == nil {
 		return nil, fmt.Errorf("repository not found: %s", name)
 	}
-	provider, err := NewRepoFromUrl(foundRepo.Url)
+	provider, err := NewRepoFromUrl(foundRepo.Url, foundRepo.Token)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
 	}
@@ -99,8 +99,8 @@ func (f *Fetcher) FetchAssets(repoName string) error {
 	if err != nil {
 		return err
 	}
-	for _, asset := range release.Assets() {
-		if err := asset.Fetch(repo.Token); err != nil {
+	for _, filename := range release.Files() {
+		if err := release.FetchFile(filename); err != nil {
 			return fmt.Errorf("error fetching file: %v", err)
 		}
 	}
@@ -116,21 +116,23 @@ func (f *Fetcher) InstallAssets(repoName string) error {
 	if err != nil {
 		return err
 	}
-	isInstalled := false
-	for _, asset := range release.Assets() {
-		if !(strings.Contains(asset.Name(), runtime.GOOS) && strings.Contains(asset.Name(), runtime.GOARCH)) {
+	var installedFile string
+	for _, filename := range release.Files() {
+		if !(strings.Contains(filename, runtime.GOOS+"_"+runtime.GOARCH)) {
 			continue
 		}
-		if err := asset.Fetch(repo.Token); err != nil {
+		if err := release.FetchFile(filename); err != nil {
 			return fmt.Errorf("error fetching file: %v", err)
 		}
-		if err := InstallFromArchive(asset.Name()); err != nil {
+		if err := InstallFromArchive(filename); err != nil {
 			return fmt.Errorf("error installing file: %v", err)
 		}
-		isInstalled = true
+		installedFile = filename
+		break
 	}
-	if isInstalled {
+	if installedFile != "" {
 		repo.InstalledTagName = release.TagName()
+		repo.InstalledFilename = installedFile
 		f.saveState()
 	}
 	return nil

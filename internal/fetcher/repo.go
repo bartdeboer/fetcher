@@ -7,11 +7,11 @@ import (
 )
 
 type Repo struct {
-	Url                string `json:"url"`
-	InstalledAssetName string `json:"installed_asset_name"`
-	InstalledTagName   string `json:"installed_tag_name"`
-	Token              string `json:"token"`
-	provider           provider.Provider
+	Url               string `json:"url"`
+	InstalledFilename string `json:"installed_filename"`
+	InstalledTagName  string `json:"installed_tag_name"`
+	Token             string `json:"token"`
+	provider          provider.Provider
 }
 
 func (r *Repo) LatestRelease() (provider.Release, error) {
