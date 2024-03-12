@@ -48,6 +48,10 @@ func (a *Asset) Fetch(token string) error {
 		return err
 	}
 
+	if token == "" {
+		token = os.Getenv("GITHUB_TOKEN")
+	}
+
 	if token != "" {
 		req.Header.Set("Authorization", "token "+token)
 	}
@@ -95,6 +99,10 @@ func (g *Github) LatestRelease(repoUrl, token string) (provider.Release, error) 
 	req, err := http.NewRequest("GET", apiUrl, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	if token == "" {
+		token = os.Getenv("GITHUB_TOKEN")
 	}
 
 	if token != "" {
