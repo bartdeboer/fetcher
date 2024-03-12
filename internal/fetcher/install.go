@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bartdeboer/fetcher/internal/extractor"
+	"github.com/bartdeboer/archiver"
 )
 
 func createExtractDir(archiveFilename string, useTemp bool) (string, error) {
@@ -35,7 +35,7 @@ func InstallFromArchive(archiveFilename string) error {
 
 	defer os.RemoveAll(extractDir)
 
-	if err := extractor.ExtractArchive(archiveFilename, extractDir); err != nil {
+	if err := archiver.Extract(archiveFilename, extractDir); err != nil {
 		return fmt.Errorf("error extracting archive: %v", err)
 	}
 
@@ -48,7 +48,6 @@ func InstallFromArchive(archiveFilename string) error {
 	}
 
 	// Optionally delete the archive file
-	// Uncomment the next line if you want to delete the archive after extraction
 	// os.Remove(archiveFilename)
 
 	return nil
