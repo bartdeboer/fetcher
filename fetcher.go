@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 )
 
@@ -13,6 +12,36 @@ const configFile = "fetcher.json"
 
 type Fetcher struct {
 	Repos []*Repo `json:"repositories"`
+}
+
+type implementation struct {
+	creator func(url, token string) Provider
+	hosts   []string
+}
+
+var impls map[string]implementation
+
+func RegisterProvider(name string, creator func(url, token string) Provider, hosts []string) {
+	impls[name] = implementation{
+		creator,
+		hosts,
+	}
+}
+
+func NewProviderFromUrl(repoUrl, token string) (Provider, error) {
+	parsedURL, err := url.Parse(repoUrl)
+	if err != nil {
+		return nil, err
+	}
+	for _, impl := range impls {
+		for _, host := range impl.hosts {
+			if strings.Contains(parsedURL.Host, host) {
+				return impl.creator(repoUrl, token), nil
+			}
+		}
+	}
+	fmt.Println("Unsupported Git service provider")
+	return nil, nil
 }
 
 func NewFetcherFromConfig() (*Fetcher, error) {
@@ -46,7 +75,7 @@ func (f *Fetcher) SaveRepo(repoUrl string) error {
 	if err != nil {
 		return fmt.Errorf("error parsing url %s: %v", repoUrl, err)
 	}
-	repo := f.findRepo(repoUrl)
+	repo := f.getRepo(repoUrl)
 	if repo != nil {
 		return fmt.Errorf("repo already exists: %s", repoUrl)
 	}
@@ -57,7 +86,7 @@ func (f *Fetcher) SaveRepo(repoUrl string) error {
 	return f.saveState()
 }
 
-func (f *Fetcher) findRepo(name string) *Repo {
+func (f *Fetcher) getRepo(name string) *Repo {
 	for _, repo := range f.Repos {
 		if repo.Url == name || strings.HasSuffix(repo.Url, "/"+name) {
 			return repo
@@ -66,12 +95,12 @@ func (f *Fetcher) findRepo(name string) *Repo {
 	return nil
 }
 
-func (f *Fetcher) FindRepo(name string) (*Repo, error) {
-	foundRepo := f.findRepo(name)
+func (f *Fetcher) GetRepo(name string) (*Repo, error) {
+	foundRepo := f.getRepo(name)
 	if foundRepo == nil {
 		return nil, fmt.Errorf("repository not found: %s", name)
 	}
-	provider, err := NewRepoFromUrl(foundRepo.Url, foundRepo.Token)
+	provider, err := NewProviderFromUrl(foundRepo.Url, foundRepo.Token)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
 	}
@@ -91,7 +120,7 @@ func (f *Fetcher) ListRepos() {
 }
 
 func (f *Fetcher) FetchAssets(repoName string) error {
-	repo, err := f.FindRepo(repoName)
+	repo, err := f.GetRepo(repoName)
 	if err != nil {
 		return err
 	}
@@ -103,37 +132,6 @@ func (f *Fetcher) FetchAssets(repoName string) error {
 		if err := release.FetchFile(filename); err != nil {
 			return fmt.Errorf("error fetching file: %v", err)
 		}
-	}
-	return nil
-}
-
-func (f *Fetcher) InstallAssets(repoName string) error {
-	repo, err := f.FindRepo(repoName)
-	if err != nil {
-		return err
-	}
-	release, err := repo.LatestRelease()
-	if err != nil {
-		return err
-	}
-	var installedFile string
-	for _, filename := range release.Files() {
-		if !(strings.Contains(filename, runtime.GOOS+"_"+runtime.GOARCH)) {
-			continue
-		}
-		if err := release.FetchFile(filename); err != nil {
-			return fmt.Errorf("error fetching file: %v", err)
-		}
-		if err := InstallFromArchive(filename); err != nil {
-			return fmt.Errorf("error installing file: %v", err)
-		}
-		installedFile = filename
-		break
-	}
-	if installedFile != "" {
-		repo.InstalledTagName = release.TagName()
-		repo.InstalledFilename = installedFile
-		f.saveState()
 	}
 	return nil
 }

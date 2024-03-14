@@ -6,8 +6,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bartdeboer/fetcher/internal/fetcher"
+	"github.com/bartdeboer/fetcher"
+	"github.com/bartdeboer/fetcher/github"
 )
+
+func init() {
+	fetcher.RegisterProvider("github", func(url, token string) fetcher.Provider {
+		return github.New(url, token)
+	}, []string{"github.com"})
+}
 
 func main() {
 

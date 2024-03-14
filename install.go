@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/bartdeboer/archiver"
@@ -26,7 +27,7 @@ func createExtractDir(archiveFilename string, useTemp bool) (string, error) {
 	return extractDir, nil
 }
 
-func InstallFromArchive(archiveFilename string) error {
+func installFromArchive(archiveFilename string) error {
 
 	extractDir, err := createExtractDir(archiveFilename, true)
 	if err != nil {
@@ -43,12 +44,43 @@ func InstallFromArchive(archiveFilename string) error {
 	destDir := filepath.Join(os.Getenv("GOPATH"), "bin")
 
 	// Copy extracted files to the destination
-	if err := CopyDir(extractDir, destDir); err != nil {
+	if err := copyDir(extractDir, destDir); err != nil {
 		return fmt.Errorf("error installing files: %v", err)
 	}
 
 	// Optionally delete the archive file
 	// os.Remove(archiveFilename)
 
+	return nil
+}
+
+func (f *Fetcher) InstallAssets(repoName string) error {
+	repo, err := f.GetRepo(repoName)
+	if err != nil {
+		return err
+	}
+	release, err := repo.LatestRelease()
+	if err != nil {
+		return err
+	}
+	var installedFile string
+	for _, filename := range release.Files() {
+		if !(strings.Contains(filename, runtime.GOOS+"_"+runtime.GOARCH)) {
+			continue
+		}
+		if err := release.FetchFile(filename); err != nil {
+			return fmt.Errorf("error fetching file: %v", err)
+		}
+		if err := installFromArchive(filename); err != nil {
+			return fmt.Errorf("error installing file: %v", err)
+		}
+		installedFile = filename
+		break
+	}
+	if installedFile != "" {
+		repo.InstalledTagName = release.TagName()
+		repo.InstalledFilename = installedFile
+		f.saveState()
+	}
 	return nil
 }

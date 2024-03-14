@@ -8,7 +8,7 @@ import (
 )
 
 // CopyFile copies a single file from src to dest
-func CopyFile(srcPath, destPath string) error {
+func copyFile(srcPath, destPath string) error {
 	var err error
 	var srcFile *os.File
 	var destFile *os.File
@@ -34,7 +34,7 @@ func CopyFile(srcPath, destPath string) error {
 }
 
 // CopyDir recursively copies a dir from src to dest
-func CopyDir(srcDir, destDir string) error {
+func copyDir(srcDir, destDir string) error {
 	var err error
 	var entries []os.DirEntry
 	var dirInfo os.FileInfo
@@ -56,11 +56,11 @@ func CopyDir(srcDir, destDir string) error {
 		destPath := path.Join(destDir, entry.Name())
 
 		if entry.IsDir() {
-			if err = CopyDir(srcPath, destPath); err != nil {
+			if err = copyDir(srcPath, destPath); err != nil {
 				fmt.Printf("Error copying directory: %v", err)
 			}
 		} else {
-			if err = CopyFile(srcPath, destPath); err != nil {
+			if err = copyFile(srcPath, destPath); err != nil {
 				fmt.Printf("Error copying file: %v", err)
 			}
 		}

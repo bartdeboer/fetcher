@@ -7,10 +7,16 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/bartdeboer/fetcher/internal/providers/provider"
+	"github.com/bartdeboer/fetcher"
 )
 
 const apiBaseUrl = "https://api.github.com/repos/"
+
+type Instancer struct{}
+
+func (i Instancer) New(url, token string) *Repo {
+	return New(url, token)
+}
 
 type Repo struct {
 	url   string
@@ -110,7 +116,7 @@ func (r *Release) FetchFile(name string) error {
 	return err
 }
 
-func (g *Repo) LatestRelease(repoUrl, token string) (provider.Release, error) {
+func (g *Repo) LatestRelease(repoUrl, token string) (fetcher.Release, error) {
 
 	repoName, err := extractRepoName(repoUrl)
 	if err != nil {
