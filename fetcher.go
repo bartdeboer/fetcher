@@ -21,6 +21,10 @@ type implementation struct {
 
 var impls map[string]implementation
 
+func init() {
+	impls = make(map[string]implementation)
+}
+
 func RegisterProvider(name string, creator func(url, token string) Provider, hosts []string) {
 	impls[name] = implementation{
 		creator,

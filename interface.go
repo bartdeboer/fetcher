@@ -1,4 +1,4 @@
-package provider
+package fetcher
 
 type Provider interface {
 	LatestRelease(repo, token string) (Release, error)
