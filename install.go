@@ -10,6 +10,7 @@ import (
 	"github.com/bartdeboer/archiver"
 )
 
+// Creates a extract directory for the archive
 func createExtractDir(archiveFilename string, useTemp bool) (string, error) {
 	base := filepath.Base(archiveFilename)
 	base = strings.TrimSuffix(base, ".tar.gz")
@@ -27,6 +28,7 @@ func createExtractDir(archiveFilename string, useTemp bool) (string, error) {
 	return extractDir, nil
 }
 
+// Installs Go binaries from the archive.
 func installFromArchive(archiveFilename string) error {
 
 	extractDir, err := createExtractDir(archiveFilename, true)
@@ -54,6 +56,7 @@ func installFromArchive(archiveFilename string) error {
 	return nil
 }
 
+// Installs the assets from the latest release for the current platform.
 func (f *Fetcher) InstallAssets(repoName string) error {
 	repo, err := f.GetRepo(repoName)
 	if err != nil {

@@ -63,6 +63,7 @@ func (r *Release) findAsset(name string) (*Asset, error) {
 	return nil, fmt.Errorf("asset %s not found", name)
 }
 
+// Retrieves the release asset
 func (r *Release) FetchFile(name string) error {
 
 	asset, err := r.findAsset(name)
@@ -116,6 +117,7 @@ func (r *Release) FetchFile(name string) error {
 	return err
 }
 
+// Finds and returns the latest release
 func (g *Repo) LatestRelease(repoUrl, token string) (fetcher.Release, error) {
 
 	repoName, err := extractRepoName(repoUrl)

@@ -33,6 +33,7 @@ func init() {
 	impls = make(map[string]implementation)
 }
 
+// Registers a new Git service provider.
 func RegisterProvider(name string, creator func(url, token string) Provider, hosts []string) {
 	impls[name] = implementation{
 		creator,
@@ -40,6 +41,7 @@ func RegisterProvider(name string, creator func(url, token string) Provider, hos
 	}
 }
 
+// Creates a provider based on a repository URL.
 func NewProviderFromUrl(repoUrl, token string) (Provider, error) {
 	parsedURL, err := url.Parse(repoUrl)
 	if err != nil {
@@ -55,6 +57,7 @@ func NewProviderFromUrl(repoUrl, token string) (Provider, error) {
 	return nil, fmt.Errorf("unsupported Git service provider")
 }
 
+// Creates a new Fetcher instance (from config file)
 func NewFetcherFromConfig() (*Fetcher, error) {
 	var f *Fetcher
 	data, err := os.ReadFile(configFile)
@@ -70,6 +73,7 @@ func NewFetcherFromConfig() (*Fetcher, error) {
 	return f, nil
 }
 
+// Saves the fetcher's state to a configuration file.
 func (f *Fetcher) saveState() error {
 	data, err := json.MarshalIndent(f, "", "  ")
 	if err != nil {
@@ -78,6 +82,7 @@ func (f *Fetcher) saveState() error {
 	return os.WriteFile(configFile, data, 0644)
 }
 
+// Adds (taps) a new repo to the fetcher and saves the configuration.
 func (f *Fetcher) SaveRepo(repoUrl string) error {
 	if repoUrl == "" {
 		return fmt.Errorf("url is required")
@@ -97,6 +102,7 @@ func (f *Fetcher) SaveRepo(repoUrl string) error {
 	return f.saveState()
 }
 
+// Finds a repo config by URL or name within the fetcher.
 func (f *Fetcher) getRepo(name string) *Repo {
 	for _, repo := range f.Repos {
 		if repo.Url == name || strings.HasSuffix(repo.Url, "/"+name) {
@@ -106,6 +112,7 @@ func (f *Fetcher) getRepo(name string) *Repo {
 	return nil
 }
 
+// Retrieves and prepares a repo for use, including its provider.
 func (f *Fetcher) GetRepo(name string) (*Repo, error) {
 	foundRepo := f.getRepo(name)
 	if foundRepo == nil {
@@ -119,6 +126,7 @@ func (f *Fetcher) GetRepo(name string) (*Repo, error) {
 	return foundRepo, nil
 }
 
+// Lists all repositories managed by the fetcher.
 func (f *Fetcher) ListRepos() {
 	if len(f.Repos) == 0 {
 		fmt.Println("No tapped repositories")
@@ -130,6 +138,7 @@ func (f *Fetcher) ListRepos() {
 	}
 }
 
+// Downloads assets from a repo's latest release.
 func (f *Fetcher) FetchAssets(repoName string) error {
 	repo, err := f.GetRepo(repoName)
 	if err != nil {
@@ -147,6 +156,7 @@ func (f *Fetcher) FetchAssets(repoName string) error {
 	return nil
 }
 
+// Gets the latest release of a repository.
 func (r *Repo) LatestRelease() (Release, error) {
 	release, err := r.provider.LatestRelease(r.Url, r.Token)
 	if err != nil {
