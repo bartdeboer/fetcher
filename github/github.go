@@ -6,34 +6,24 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/bartdeboer/fetcher"
 )
 
 const apiBaseUrl = "https://api.github.com/repos/"
 
-type Instancer struct{}
+var hosts = []string{"github.com"}
 
-func (i Instancer) New(url, token string) *Repo {
-	return New(url, token)
-}
+type Repo struct{}
 
-type Repo struct {
-	url   string
-	token string
-}
-
-func New(url, token string) *Repo {
-	return &Repo{
-		url,
-		token,
-	}
+func New() *Repo {
+	return &Repo{}
 }
 
 type Release struct {
 	tagName string
 	assets  []Asset
-	token   string
 }
 
 type Asset struct {
@@ -64,7 +54,7 @@ func (r *Release) findAsset(name string) (*Asset, error) {
 }
 
 // Retrieves the release asset
-func (r *Release) FetchFile(name string) error {
+func (r *Release) FetchFile(name, token string) error {
 
 	asset, err := r.findAsset(name)
 	if err != nil {
@@ -77,8 +67,6 @@ func (r *Release) FetchFile(name string) error {
 	if err != nil {
 		return err
 	}
-
-	var token = r.token
 
 	if token == "" {
 		token = os.Getenv("GITHUB_TOKEN")
@@ -115,6 +103,15 @@ func (r *Release) FetchFile(name string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+func (g *Repo) CanHandleHost(host string) bool {
+	for i, _ := range hosts {
+		if strings.Contains(host, hosts[i]) {
+			return true
+		}
+	}
+	return false
 }
 
 // Finds and returns the latest release
@@ -166,8 +163,6 @@ func (g *Repo) LatestRelease(repoUrl, token string) (fetcher.Release, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, err
 	}
-
-	release.token = g.token
 
 	return &release, nil
 }

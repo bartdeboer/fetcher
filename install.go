@@ -50,7 +50,7 @@ func installFromArchive(archiveFilename string) error {
 		return fmt.Errorf("error installing files: %v", err)
 	}
 
-	// Optionally delete the archive file
+	// Delete the archive file
 	// os.Remove(archiveFilename)
 
 	return nil
@@ -71,7 +71,7 @@ func (f *Fetcher) InstallAssets(repoName string) error {
 		if !(strings.Contains(filename, runtime.GOOS+"_"+runtime.GOARCH)) {
 			continue
 		}
-		if err := release.FetchFile(filename); err != nil {
+		if err := release.FetchFile(filename, repo.Token); err != nil {
 			return fmt.Errorf("error fetching file: %v", err)
 		}
 		if err := installFromArchive(filename); err != nil {

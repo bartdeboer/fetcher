@@ -10,9 +10,7 @@ import (
 )
 
 func init() {
-	fetcher.RegisterProvider("github", func(url, token string) fetcher.Provider {
-		return github.New(url, token)
-	}, []string{"github.com"})
+	fetcher.RegisterProvider("github", github.New())
 }
 
 func main() {

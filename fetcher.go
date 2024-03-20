@@ -22,36 +22,24 @@ type Repo struct {
 	provider          Provider
 }
 
-type implementation struct {
-	creator func(url, token string) Provider
-	hosts   []string
-}
-
-var impls map[string]implementation
+var providers map[string]Provider
 
 func init() {
-	impls = make(map[string]implementation)
+	providers = make(map[string]Provider)
 }
 
-// Registers a new Git service provider.
-func RegisterProvider(name string, creator func(url, token string) Provider, hosts []string) {
-	impls[name] = implementation{
-		creator,
-		hosts,
-	}
+func RegisterProvider(name string, provider Provider) {
+	providers[name] = provider
 }
 
-// Creates a provider based on a repository URL.
-func NewProviderFromUrl(repoUrl, token string) (Provider, error) {
+func NewProviderFromUrl(repoUrl string) (Provider, error) {
 	parsedURL, err := url.Parse(repoUrl)
 	if err != nil {
 		return nil, err
 	}
-	for _, impl := range impls {
-		for _, host := range impl.hosts {
-			if strings.Contains(parsedURL.Host, host) {
-				return impl.creator(repoUrl, token), nil
-			}
+	for _, provider := range providers {
+		if provider.CanHandleHost(parsedURL.Host) {
+			return provider, nil
 		}
 	}
 	return nil, fmt.Errorf("unsupported Git service provider")
@@ -118,7 +106,7 @@ func (f *Fetcher) GetRepo(name string) (*Repo, error) {
 	if foundRepo == nil {
 		return nil, fmt.Errorf("repository not found: %s", name)
 	}
-	provider, err := NewProviderFromUrl(foundRepo.Url, foundRepo.Token)
+	provider, err := NewProviderFromUrl(foundRepo.Url)
 	if err != nil {
 		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
 	}
@@ -149,7 +137,7 @@ func (f *Fetcher) FetchAssets(repoName string) error {
 		return err
 	}
 	for _, filename := range release.Files() {
-		if err := release.FetchFile(filename); err != nil {
+		if err := release.FetchFile(filename, repo.Token); err != nil {
 			return fmt.Errorf("error fetching file: %v", err)
 		}
 	}
