@@ -32,7 +32,7 @@ func RegisterProvider(name string, provider Provider) {
 	providers[name] = provider
 }
 
-func NewProviderFromUrl(repoUrl string) (Provider, error) {
+func GetProviderFromUrl(repoUrl string) (Provider, error) {
 	parsedURL, err := url.Parse(repoUrl)
 	if err != nil {
 		return nil, err
@@ -106,9 +106,9 @@ func (f *Fetcher) GetRepo(name string) (*Repo, error) {
 	if foundRepo == nil {
 		return nil, fmt.Errorf("repository not found: %s", name)
 	}
-	provider, err := NewProviderFromUrl(foundRepo.Url)
+	provider, err := GetProviderFromUrl(foundRepo.Url)
 	if err != nil {
-		return nil, fmt.Errorf("error creating provider for %s: %w", foundRepo.Url, err)
+		return nil, fmt.Errorf("error getting provider for %s: %w", foundRepo.Url, err)
 	}
 	foundRepo.provider = provider
 	return foundRepo, nil
